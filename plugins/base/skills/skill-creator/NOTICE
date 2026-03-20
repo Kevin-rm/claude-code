@@ -1,0 +1,18 @@
+skill-creator
+Copyright 2025 Anthropic, PBC
+
+This skill is a derivative work based on the original skill-creator
+from https://github.com/anthropics/skills, licensed under the Apache
+License, Version 2.0.
+
+Modifications by Kevin RAMAROZATOVO (2026):
+- Restructured SKILL.md for progressive disclosure (485 → 226 lines)
+- Added mode detection for intent routing
+- Extracted eval workflow, description optimization, and packaging into
+  separate reference files
+- Condensed agent instructions (grader, comparator, analyzer) by removing
+  duplicated JSON schemas
+- Added environments.md for Claude.ai/Cowork-specific adaptations
+- Added feedback.json and eval_metadata.json schemas to schemas.md
+- Applied Anthropic's official best practices for Skills, Prompting,
+  and Sub-agents

@@ -1,0 +1,13 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+
+# Dependencies
+node_modules/
+
+# Claude Code
+CLAUDE.local.md
+.claude/settings.local.json

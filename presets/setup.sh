@@ -111,9 +111,16 @@ validate_json() {
   fi
 }
 
-# $1 = base (lower priority), $2 = overlay (wins)
+# $1 = base (lower priority), $2 = overlay (wins), $3 = dest
 deep_merge() {
   local base="$1" overlay="$2" dest="$3"
+
+  if [[ ! -s "$base" ]]; then
+    cp "$overlay" "$dest"; return
+  fi
+  if [[ ! -s "$overlay" ]]; then
+    cp "$base" "$dest"; return
+  fi
 
   validate_json "$base"
   validate_json "$overlay"
@@ -169,6 +176,12 @@ ensure_jq() {
     return 1
   fi
 
+  read -rp "Install jq via $mgr? [y/N] " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    warn "jq installation declined — merge unavailable"
+    return 1
+  fi
+
   info "Installing jq via $mgr …"
 
   case "$mgr" in
@@ -196,18 +209,29 @@ ensure_jq() {
   info "jq installed successfully"
 }
 
-install_preset() {
-  local src="$1"
+# install_file SRC DEST [--mergeable]
+install_file() {
+  local src="" dest="" mergeable=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --mergeable) mergeable=true; shift ;;
+      *)
+        if [[ -z "$src" ]]; then src="$1"
+        else dest="$1"
+        fi
+        shift ;;
+    esac
+  done
+
   local filename
-  filename="$(basename "$src")"
-  local dest="$CLAUDE_DIR/$filename"
+  filename="$(basename "$dest")"
 
   if [[ ! -f "$src" ]]; then
     error "Source not found: $src"
     return 1
   fi
 
-  mkdir -p "$CLAUDE_DIR"
+  mkdir -p "$(dirname "$dest")"
 
   if [[ ! -f "$dest" ]]; then
     if $DRY_RUN; then
@@ -223,18 +247,18 @@ install_preset() {
 
   if $FORCE_OVERWRITE; then
     backup "$dest"
-    if ! $DRY_RUN; then
-      cp "$src" "$dest"
-    fi
+    if ! $DRY_RUN; then cp "$src" "$dest"; fi
     info "$filename overwritten"
     return
   fi
 
-  local is_json=false
-  [[ "$filename" == *.json ]] && is_json=true
+  local offer_merge=false
+  if $mergeable && [[ "$filename" == *.json ]]; then
+    offer_merge=true
+  fi
 
   local can_merge=false
-  if $is_json && command -v jq &>/dev/null; then
+  if $offer_merge && command -v jq &>/dev/null; then
     can_merge=true
   fi
 
@@ -244,7 +268,7 @@ install_preset() {
       "${GREEN}Merge${NC} (your settings win, preset fills gaps)" \
       "${YELLOW}Overwrite${NC} (replace with preset)" \
       "${RED}Skip${NC}"
-  elif $is_json; then
+  elif $offer_merge; then
     prompt_choice choice "3" \
       "${GREEN}Install jq${NC} then merge" \
       "${YELLOW}Overwrite${NC} (replace with preset)" \
@@ -265,7 +289,7 @@ install_preset() {
           deep_merge "$src" "$dest" "$dest"
           info "$filename merged into $dest"
         fi
-      elif $is_json; then
+      elif $offer_merge; then
         if ensure_jq; then
           backup "$dest"
           if ! $DRY_RUN; then
@@ -282,7 +306,7 @@ install_preset() {
       fi
       ;;
     2)
-      if $can_merge || $is_json; then
+      if $offer_merge; then
         backup "$dest"
         if ! $DRY_RUN; then cp "$src" "$dest"; fi
         info "$filename overwritten"
@@ -303,18 +327,20 @@ printf '%b======================================%b\n' "$BOLD" "$NC"
 $DRY_RUN && echo "  (dry-run mode — no files will be changed)"
 echo ""
 
-installed=0
-for src in "$PRESETS_DIR"/*.json "$PRESETS_DIR"/*.yaml "$PRESETS_DIR"/*.yml; do
-  [[ -f "$src" ]] || continue
-  [[ "$(basename "$src")" == "$(basename "${BASH_SOURCE[0]}")" ]] && continue
+install_ccstatusline() {
+  local src="$PRESETS_DIR/statusline.json"
+  local dest="$HOME/.config/ccstatusline/settings.json"
 
-  install_preset "$src"
-  (( installed++ ))
-done
+  if [[ ! -f "$src" ]]; then
+    return
+  fi
 
-if [[ $installed -eq 0 ]]; then
-  warn "No preset files found in $PRESETS_DIR"
-fi
+  info "Setting up ccstatusline..."
+  install_file "$src" "$dest"
+}
+
+install_file "$PRESETS_DIR/settings.json" "$CLAUDE_DIR/settings.json" --mergeable
+install_ccstatusline
 
 echo ""
-info "Done! ($installed file(s) processed)"
+info "Done!"

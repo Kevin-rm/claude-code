@@ -1,5 +1,16 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "companyAnnouncements": [
+    "📘 Refer to the project documentation for usage details.",
+    "📄 Review guidelines before proceeding.",
+    "🧠 Keep modifications minimal and focused.",
+    "⚠️ Ensure adjustments align with project requirements.",
+    "🔍 Please review generated changes carefully before applying them."
+  ],
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Bash(git status)",
@@ -41,17 +52,11 @@
     ],
     "defaultMode": "acceptEdits"
   },
-  "attribution": {
-    "commit": "",
-    "pr": ""
+  "statusLine": {
+    "type": "command",
+    "command": "bunx -y ccstatusline@latest",
+    "padding": 0
   },
-  "companyAnnouncements": [
-    "📘 Refer to the project documentation for usage details.",
-    "📄 Review guidelines before proceeding.",
-    "🧠 Keep modifications minimal and focused.",
-    "⚠️ Ensure adjustments align with project requirements.",
-    "🔍 Please review generated changes carefully before applying them."
-  ],
   "respectGitignore": false,
   "spinnerVerbs": {
     "mode": "append",

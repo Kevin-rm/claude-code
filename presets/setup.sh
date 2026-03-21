@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
     --non-interactive)  NON_INTERACTIVE=true; shift ;;
     --dry-run)          DRY_RUN=true; shift ;;
     -h|--help)          usage ;;
-    *)                  echo "Unknown option: $1"; usage ;;
+    *)                  echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
 
@@ -67,24 +67,33 @@ make_tmp() {
   echo "$t"
 }
 
-# prompt_choice VARNAME default "label1" "label2" ...
+# prompt_choice VARNAME default "key:label" "key:label" ...
 prompt_choice() {
   local varname="$1"; shift
   local default="$1"; shift
-  local options=("$@")
+  local entries=("$@")
 
   if $NON_INTERACTIVE || $DRY_RUN; then
     printf -v "$varname" '%s' "$default"
     return
   fi
 
+  local keys=()
   local i=1
-  for opt in "${options[@]}"; do
-    echo -e "  $i) $opt"
+  for entry in "${entries[@]}"; do
+    local key="${entry%%:*}"
+    local label="${entry#*:}"
+    keys+=("$key")
+    echo -e "  $i) $label"
     (( i++ ))
   done
-  read -rp "Choose [1-${#options[@]}]: " choice
-  printf -v "$varname" '%s' "${choice:-$default}"
+  read -rp "Choose [1-${#entries[@]}]: " choice
+
+  if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#keys[@]} )); then
+    printf -v "$varname" '%s' "${keys[$((choice - 1))]}"
+  else
+    printf -v "$varname" '%s' "$default"
+  fi
 }
 
 backup() {
@@ -95,12 +104,12 @@ backup() {
   bak="${file}.bak.$(date +%Y%m%d%H%M%S)"
 
   if $DRY_RUN; then
-    info "[dry-run] Would backup $file → $bak"
+    info "[dry-run] Would backup $file -> $bak"
     return
   fi
 
   cp "$file" "$bak"
-  info "Backup saved → $bak"
+  info "Backup saved -> $bak"
 }
 
 validate_json() {
@@ -116,10 +125,12 @@ deep_merge() {
   local base="$1" overlay="$2" dest="$3"
 
   if [[ ! -s "$base" ]]; then
-    cp "$overlay" "$dest"; return
+    [[ "$(realpath "$overlay")" != "$(realpath "$dest")" ]] && cp "$overlay" "$dest"
+    return
   fi
   if [[ ! -s "$overlay" ]]; then
-    cp "$base" "$dest"; return
+    [[ "$(realpath "$base")" != "$(realpath "$dest")" ]] && cp "$base" "$dest"
+    return
   fi
 
   validate_json "$base"
@@ -151,7 +162,7 @@ deep_merge() {
 ensure_jq() {
   command -v jq &>/dev/null && return 0
 
-  warn "jq is not installed — required for merge"
+  warn "jq is not installed -- required for merge"
 
   if $NON_INTERACTIVE; then
     error "Cannot install jq in non-interactive mode"
@@ -178,11 +189,11 @@ ensure_jq() {
 
   read -rp "Install jq via $mgr? [y/N] " confirm
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    warn "jq installation declined — merge unavailable"
+    warn "jq installation declined -- merge unavailable"
     return 1
   fi
 
-  info "Installing jq via $mgr …"
+  info "Installing jq via $mgr ..."
 
   case "$mgr" in
     brew)     brew install jq ;;
@@ -202,7 +213,7 @@ ensure_jq() {
   hash -r 2>/dev/null
 
   if ! command -v jq &>/dev/null; then
-    warn "jq installed but not yet in PATH — re-run in a new terminal"
+    warn "jq installed but not yet in PATH -- re-run in a new terminal"
     return 1
   fi
 
@@ -235,10 +246,10 @@ install_file() {
 
   if [[ ! -f "$dest" ]]; then
     if $DRY_RUN; then
-      info "[dry-run] Would install $filename → $dest"
+      info "[dry-run] Would install $filename -> $dest"
     else
       cp "$src" "$dest"
-      info "$filename installed → $dest"
+      info "$filename installed -> $dest"
     fi
     return
   fi
@@ -252,67 +263,61 @@ install_file() {
     return
   fi
 
-  local offer_merge=false
+  local strategy="overwrite-or-skip"
   if $mergeable && [[ "$filename" == *.json ]]; then
-    offer_merge=true
+    if command -v jq &>/dev/null; then
+      strategy="merge-ready"
+    else
+      strategy="merge-needs-jq"
+    fi
   fi
 
-  local can_merge=false
-  if $offer_merge && command -v jq &>/dev/null; then
-    can_merge=true
-  fi
+  local action
+  case "$strategy" in
+    merge-ready)
+      prompt_choice action "skip" \
+        "merge:${GREEN}Merge${NC} (your settings win, preset fills gaps)" \
+        "overwrite:${YELLOW}Overwrite${NC} (replace with preset)" \
+        "skip:${RED}Skip${NC}"
+      ;;
+    merge-needs-jq)
+      prompt_choice action "skip" \
+        "install-jq:${GREEN}Install jq${NC} then merge" \
+        "overwrite:${YELLOW}Overwrite${NC} (replace with preset)" \
+        "skip:${RED}Skip${NC}"
+      ;;
+    *)
+      prompt_choice action "skip" \
+        "overwrite:${YELLOW}Overwrite${NC} (replace with preset)" \
+        "skip:${RED}Skip${NC}"
+      ;;
+  esac
 
-  local choice
-  if $can_merge; then
-    prompt_choice choice "3" \
-      "${GREEN}Merge${NC} (your settings win, preset fills gaps)" \
-      "${YELLOW}Overwrite${NC} (replace with preset)" \
-      "${RED}Skip${NC}"
-  elif $offer_merge; then
-    prompt_choice choice "3" \
-      "${GREEN}Install jq${NC} then merge" \
-      "${YELLOW}Overwrite${NC} (replace with preset)" \
-      "${RED}Skip${NC}"
-  else
-    prompt_choice choice "2" \
-      "${YELLOW}Overwrite${NC} (replace with preset)" \
-      "${RED}Skip${NC}"
-  fi
-
-  case "$choice" in
-    1)
-      if $can_merge; then
+  case "$action" in
+    merge)
+      backup "$dest"
+      if $DRY_RUN; then
+        info "[dry-run] Would deep-merge $filename"
+      else
+        deep_merge "$src" "$dest" "$dest"
+        info "$filename merged into $dest"
+      fi
+      ;;
+    install-jq)
+      if ensure_jq; then
         backup "$dest"
-        if $DRY_RUN; then
-          info "[dry-run] Would deep-merge $filename"
-        else
+        if ! $DRY_RUN; then
           deep_merge "$src" "$dest" "$dest"
           info "$filename merged into $dest"
         fi
-      elif $offer_merge; then
-        if ensure_jq; then
-          backup "$dest"
-          if ! $DRY_RUN; then
-            deep_merge "$src" "$dest" "$dest"
-            info "$filename merged into $dest"
-          fi
-        else
-          warn "Merge unavailable — skipping $filename"
-        fi
       else
-        backup "$dest"
-        if ! $DRY_RUN; then cp "$src" "$dest"; fi
-        info "$filename overwritten"
+        warn "Merge unavailable -- skipping $filename"
       fi
       ;;
-    2)
-      if $offer_merge; then
-        backup "$dest"
-        if ! $DRY_RUN; then cp "$src" "$dest"; fi
-        info "$filename overwritten"
-      else
-        warn "Skipped $filename"
-      fi
+    overwrite)
+      backup "$dest"
+      if ! $DRY_RUN; then cp "$src" "$dest"; fi
+      info "$filename overwritten"
       ;;
     *)
       warn "Skipped $filename"
@@ -324,7 +329,7 @@ echo ""
 printf '%b======================================%b\n' "$BOLD" "$NC"
 printf '%b  Claude Code Presets -- Setup%b\n' "$BOLD" "$NC"
 printf '%b======================================%b\n' "$BOLD" "$NC"
-$DRY_RUN && echo "  (dry-run mode — no files will be changed)"
+$DRY_RUN && echo "  (dry-run mode -- no files will be changed)"
 echo ""
 
 install_ccstatusline() {

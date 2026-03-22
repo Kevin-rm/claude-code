@@ -1,0 +1,21 @@
+{
+  "name": "kra-plugins",
+  "owner": {
+    "name": "Kevin RAMAROZATOVO",
+    "email": "kevinramarozatovo@gmail.com"
+  },
+  "metadata": {
+    "description": "KRA's opinionated Claude Code plugins, built on Anthropic's official best practices."
+  },
+  "plugins": [
+    {
+      "name": "base",
+      "source": "./plugins/base",
+      "description": "Essential Claude Code configuration — skills, hooks, and defaults for everyday use.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Kevin RAMAROZATOVO"
+      }
+    }
+  ]
+}

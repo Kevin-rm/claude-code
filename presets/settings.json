@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "companyAnnouncements": [
+    "📘 Refer to the project documentation for usage details.",
+    "📄 Review guidelines before proceeding.",
+    "🧠 Keep modifications minimal and focused.",
+    "⚠️ Ensure adjustments align with project requirements.",
+    "🔍 Please review generated changes carefully before applying them."
+  ],
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git add *)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)",
+      "Bash(cd *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(echo *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Agent",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.development)",
+      "Read(**/.env.production)",
+      "Read(**/.env.staging)",
+      "Read(**/credentials.json)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*secret*)",
+      "Read(**/.ssh/*)",
+      "Bash(sudo *)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bunx -y ccstatusline@latest",
+    "padding": 0
+  },
+  "respectGitignore": false,
+  "spinnerVerbs": {
+    "mode": "append",
+    "verbs": ["Kevining", "Overthinking", "Procrastinating"]
+  }
+}

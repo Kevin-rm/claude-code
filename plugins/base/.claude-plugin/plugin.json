@@ -1,0 +1,11 @@
+{
+  "name": "base",
+  "description": "Essential Claude Code configuration — skills, hooks, and defaults for everyday use.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Kevin RAMAROZATOVO",
+    "email": "kevinramarozatovo@gmail.com"
+  },
+  "repository": "https://github.com/Kevin-rm/claude-code",
+  "license": "Apache-2.0"
+}

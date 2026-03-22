@@ -325,13 +325,6 @@ install_file() {
   esac
 }
 
-echo ""
-printf '%b======================================%b\n' "$BOLD" "$NC"
-printf '%b  Claude Code Presets -- Setup%b\n' "$BOLD" "$NC"
-printf '%b======================================%b\n' "$BOLD" "$NC"
-$DRY_RUN && echo "  (dry-run mode -- no files will be changed)"
-echo ""
-
 install_ccstatusline() {
   local src="$PRESETS_DIR/statusline.json"
   local dest="$HOME/.config/ccstatusline/settings.json"
@@ -343,6 +336,13 @@ install_ccstatusline() {
   info "Setting up ccstatusline..."
   install_file "$src" "$dest"
 }
+
+echo ""
+printf '%b======================================%b\n' "$BOLD" "$NC"
+printf '%b  Claude Code Presets -- Setup%b\n' "$BOLD" "$NC"
+printf '%b======================================%b\n' "$BOLD" "$NC"
+$DRY_RUN && echo "  (dry-run mode -- no files will be changed)"
+echo ""
 
 install_file "$PRESETS_DIR/settings.json" "$CLAUDE_DIR/settings.json" --mergeable
 install_ccstatusline

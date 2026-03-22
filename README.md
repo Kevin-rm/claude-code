@@ -41,6 +41,12 @@ Available options:
 
 Merge requires [jq](https://jqlang.github.io/jq/) — the script will offer to install it if missing. On Windows (winget), you may need to **restart your terminal** after installing jq for it to be available in PATH.
 
+### Statusline
+
+The presets ship with a preconfigured status bar that displays model info, git status, context usage, and session metrics at a glance. The layout was generated with [ccstatusline](https://github.com/sirmalloc/ccstatusline) and can be customized further via its interactive TUI.
+
+![Statusline](assets/statusline.png)
+
 ## Development
 
 ```bash
